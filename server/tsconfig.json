@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     // File Layout
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./dist",
 
     // Environment Settings
@@ -33,5 +33,5 @@
     "esModuleInterop": true,
     "strict": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "index.mts"]
 }

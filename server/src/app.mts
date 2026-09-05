@@ -76,7 +76,7 @@ app.post('/livekit/token', authMiddleware, async (req: Request, res: Response) =
 
 })
 
-app.get("/api/health", (req, res) => {
+app.get("/health", (req, res) => {
   res.json({
     status: "ok",
   });
@@ -88,7 +88,7 @@ const indexPath = path.resolve(frontendPath, "index.html");
 app.use(express.static(frontendPath));
 
 
-app.get(/.*/, (req, res) => {
+app.get(/^(?!\/api\/).*/, (req, res) => {
   res.sendFile(indexPath);
 });
 
