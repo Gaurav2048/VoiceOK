@@ -1,72 +1,142 @@
+"use client";
+
 import { useEffect, useRef } from "react";
 
-/** Ambient waveform drawn behind the hero copy. Purely decorative but tied to the subject. */
-function HeroWaveform() {
+// The VoiceOK artwork uses two asymmetric peaks that taper to a point at each edge.
+const sampleCount = 160;
+const samples = Array.from({ length: sampleCount + 1 }, (_, index) => {
+  const x = index / sampleCount;
+  const peaks =
+    0.27 +
+    0.82 * Math.exp(-(((x - 0.32) / 0.122) ** 2)) +
+    0.66 * Math.exp(-(((x - 0.73) / 0.152) ** 2));
+  return { x, envelope: Math.sin(Math.PI * x) ** 1.13 * peaks };
+});
+
+const strands = Array.from({ length: 48 }, (_, index) => {
+  const depth = index / 47;
+  return {
+    depth,
+    alpha: 0.28 + 0.54 * Math.sin(Math.PI * depth) ** 0.6,
+    lineWidth: index % 7 === 0 ? 1.3 : 0.8,
+  };
+});
+
+/** Place inside a hero with position: relative and isolation: isolate. */
+export default function HeroWaveform() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
 
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    let raf = 0;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let width = 0;
+    let height = 0;
     let phase = 0;
-
-    const resize = () => {
-      const parent = canvas.parentElement;
-      if (!parent) return;
-      canvas.width = parent.clientWidth * devicePixelRatio;
-      canvas.height = parent.clientHeight * devicePixelRatio;
-      canvas.style.width = `${parent.clientWidth}px`;
-      canvas.style.height = `${parent.clientHeight}px`;
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    const layers = [
-      { amp: 26, freq: 0.006, speed: 0.012, color: "rgba(232,163,61,0.16)" },
-      { amp: 18, freq: 0.009, speed: -0.018, color: "rgba(95,212,196,0.13)" },
-      { amp: 12, freq: 0.014, speed: 0.026, color: "rgba(242,239,233,0.06)" },
-    ];
+    let visible = true;
+    let frame = 0;
+    let lastPaint: number | null = null;
 
     const draw = () => {
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-      const midY = h * 0.58;
-
-      layers.forEach((layer) => {
+      ctx.clearRect(0, 0, width, height);
+      for (const strand of strands) {
+        const q = strand.depth;
+        ctx.globalAlpha = strand.alpha;
+        ctx.lineWidth = strand.lineWidth;
         ctx.beginPath();
-        for (let x = 0; x <= w; x += 4) {
-          const y =
-            midY +
-            Math.sin(x * layer.freq + phase * layer.speed) * layer.amp * devicePixelRatio;
-          if (x === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+        for (const { x, envelope } of samples) {
+          const twist =
+            0.63 * Math.sin(x * 16.5 + q * 4.55 + phase + 0.7 * Math.sin(x * 7.2 - phase)) +
+            0.24 * Math.sin(x * 27 + q * 2.6 - phase * 0.55) +
+            (q - 0.5) * 0.52;
+          const y = height * (0.58 + 0.38 * envelope * twist);
+          if (x === 0) ctx.moveTo(0, y);
+          else ctx.lineTo(x * width, y);
         }
-        ctx.strokeStyle = layer.color;
-        ctx.lineWidth = 1.5 * devicePixelRatio;
         ctx.stroke();
-      });
-
-      phase += 1;
-      if (!reduceMotion) raf = requestAnimationFrame(draw);
+      }
+      ctx.globalAlpha = 1;
     };
 
-    draw();
+    const tick = (now: number) => {
+      if (lastPaint === null) lastPaint = now;
+      const elapsed = now - lastPaint;
+      if (elapsed >= 40) {
+        phase += Math.min(elapsed, 90) * 0.00036;
+        lastPaint = now;
+        draw();
+      }
+      frame = requestAnimationFrame(tick);
+    };
+
+    const sync = () => {
+      cancelAnimationFrame(frame);
+      lastPaint = null;
+      if (!visible || document.hidden || width === 0 || height === 0) return;
+      draw();
+      if (!motion.matches) frame = requestAnimationFrame(tick);
+    };
+
+    const resize = () => {
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      if (width && height) {
+        ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
+        const gradient = ctx.createLinearGradient(0, 0, width, 0);
+        gradient.addColorStop(0, "#a34b73");
+        gradient.addColorStop(0.23, "#e67778");
+        gradient.addColorStop(0.53, "#ffd9a6");
+        gradient.addColorStop(0.76, "#ff9c5f");
+        gradient.addColorStop(1, "#c76b65");
+        ctx.strokeStyle = gradient;
+      }
+      sync();
+    };
+
+    const sizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize);
+    const viewObserver = typeof IntersectionObserver === "undefined" ? null :
+      new IntersectionObserver(([entry]) => {
+        visible = entry.isIntersecting;
+        sync();
+      });
+
+    resize();
+    sizeObserver?.observe(canvas);
+    viewObserver?.observe(canvas);
+    window.addEventListener("resize", resize);
+    document.addEventListener("visibilitychange", sync);
+    motion.addEventListener("change", sync);
+
     return () => {
-      cancelAnimationFrame(raf);
+      sizeObserver?.disconnect();
+      viewObserver?.disconnect();
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", sync);
+      motion.removeEventListener("change", sync);
+      cancelAnimationFrame(frame);
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="hero-waveform" aria-hidden="true" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="hero-waveform"
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        display: "block",
+        zIndex: -1,
+        pointerEvents: "none",
+        opacity: "var(--hero-waveform-opacity, 0.65)",
+      }}
+    />
+  );
 }
-
-
-export default HeroWaveform;

@@ -28,6 +28,9 @@
           justify-content: center;
           border-right: 1px solid var(--line);
           overflow: hidden;
+          position: relative;
+          isolation: isolate;
+          --hero-waveform-opacity: 0.65;
         }
         .hero-waveform {
           position: absolute;
