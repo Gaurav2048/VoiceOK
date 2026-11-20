@@ -6,6 +6,9 @@ import authMiddleware from "./auth.middleware.mjs";
 import httpStatus from "http-status";
 import cors from "cors";
 import morgan from 'morgan';
+import fs from 'fs';
+import path from 'path';
+
 
 import jwt from 'jsonwebtoken';
 import createLiveKitToken from "./auth/livekit.mjs";
