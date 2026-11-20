@@ -1,4 +1,7 @@
- :root {
+html {
+  background: #14151A;;
+}
+:root {
           --bg: #14151A;
           --panel: #1B1D24;
           --line: rgba(242,239,233,0.10);
