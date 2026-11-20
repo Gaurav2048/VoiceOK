@@ -22,7 +22,7 @@ app.use(express.json());
 app.use(cors());
 
 const accessLogStream = fs.createWriteStream(
-  path.join(__dirname, 'access.log'),
+  path.join(import.meta.dirname, 'access.log'),
   { flags: 'a' }
 );
 
