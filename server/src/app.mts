@@ -5,7 +5,7 @@ import { type Request, type Response, type NextFunction } from "express";
 import authMiddleware from "./auth.middleware.mjs";
 import httpStatus from "http-status";
 import cors from "cors";
-
+import morgan from 'morgan';
 
 import jwt from 'jsonwebtoken';
 import createLiveKitToken from "./auth/livekit.mjs";
@@ -19,6 +19,12 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+const accessLogStream = fs.createWriteStream(
+  path.join(__dirname, 'access.log'),
+  { flags: 'a' }
+);
+
+app.use(morgan('combined', { stream: accessLogStream }));
 
 app.get(
   '/auth/google', 
@@ -38,7 +44,7 @@ app.get(
     }
 
     // Sign a new token containing user details that expires in 24 hours
-    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign(user, JWT_SECRET);
 
     // Option A: Send the token back directly as a response
     res.json({
@@ -81,6 +87,20 @@ app.get("/health", (req, res) => {
     status: "ok",
   });
 });
+
+app.get('/logs/:id', (req: Request, res: Response) => {
+  if (id!=='ginger' && req.query.password !== 'honey') {
+    res.status(401).send("unauthorised")
+    return
+  }
+
+  const logPath = path.join(import.meta.dirname, 'access.log');
+  
+  fs.readFile(logPath, 'utf8', (err, data) => {
+    if (err) return res.status(500).send('Could not read log file.');
+    res.type('text/plain').send(data);
+  });
+})
 
 const frontendPath = path.resolve(process.cwd(), "public");
 const indexPath = path.resolve(frontendPath, "index.html");
