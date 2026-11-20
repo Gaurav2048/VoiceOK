@@ -7,7 +7,6 @@ import httpStatus from "http-status";
 import cors from "cors";
 import morgan from 'morgan';
 import fs from 'fs';
-import path from 'path';
 
 
 import jwt from 'jsonwebtoken';
@@ -92,7 +91,7 @@ app.get("/health", (req, res) => {
 });
 
 app.get('/logs/:id', (req: Request, res: Response) => {
-  if (id!=='ginger' && req.query.password !== 'honey') {
+  if (req.params.id!=='ginger' && req.query.password !== 'honey') {
     res.status(401).send("unauthorised")
     return
   }
