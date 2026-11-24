@@ -1,6 +1,6 @@
 # VoiceOk
 
-<img width="1459" height="817" alt="Screenshot 2026-09-06 at 4 00 17 AM" src="https://github.com/user-attachments/assets/6ea4ed86-378c-4f3f-8010-312c0f771644" />
+<img width="1704" height="854" alt="Screenshot 2026-11-20 at 10 44 38 PM" src="https://github.com/user-attachments/assets/d0487ebc-8b72-4498-ab0f-640e5edf8788" />
 
 A voice AI you call like a person. VoiceOk is a one-page, non-scrolling frontend for a voice agent — sign in, tap to call, and talk to an AI that searches the live internet, remembers the conversation, and replies in real time.
 
